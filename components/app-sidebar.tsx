@@ -1,0 +1,79 @@
+"use client"
+
+import { Building2, FileText, Home, Settings, Sparkles } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar"
+
+const menuItems = [
+  {
+    title: "Dashboard",
+    url: "/",
+    icon: Home,
+  },
+  {
+    title: "Instituições",
+    url: "/instituicoes",
+    icon: Building2,
+  },
+  {
+    title: "Projetos PRONAS/PCD",
+    url: "/projetos",
+    icon: FileText,
+  },
+  {
+    title: "Configurações",
+    url: "/configuracoes",
+    icon: Settings,
+  },
+]
+
+export function AppSidebar() {
+  const pathname = usePathname()
+
+  return (
+    <Sidebar className="border-r">
+      <SidebarHeader className="p-6">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+            <Sparkles className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold">PRONASys Suite</h1>
+            <p className="text-xs text-muted-foreground">Gestão PRONAS/PCD</p>
+          </div>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navegação Principal</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={pathname === item.url}>
+                    <Link href={item.url}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
+  )
+}

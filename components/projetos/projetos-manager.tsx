@@ -20,7 +20,7 @@ export function ProjetosManager() {
       // Dados do formulário
       campoAtuacao: "",
       prazoExecucao: "",
-      areasArt10: "",
+      areasArt10: [],
       resumoIdeia: "",
       problemacentral: "",
       relevancia: "",

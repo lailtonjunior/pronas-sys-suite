@@ -21,7 +21,7 @@ interface Instituicao {
   createdAt: string
 }
 
-interface Projeto {
+export interface Projeto {
   id: string
   titulo: string
   instituicaoId: string
@@ -31,7 +31,7 @@ interface Projeto {
   // Campos do formulário
   campoAtuacao: string
   prazoExecucao: string
-  areasArt10: string
+  areasArt10: string[]
   resumoIdeia: string
   problemacentral: string
   relevancia: string

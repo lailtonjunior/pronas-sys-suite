@@ -1,12 +1,13 @@
 "use client"
 
-import { Building2, FileText, Home, Settings, Sparkles } from "lucide-react"
+import { Building2, FileText, Home, Settings, Sparkles, UserCircle, LogOut, BrainCircuit } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -14,6 +15,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from "@/components/ui/sidebar"
 
 const menuItems = [
@@ -31,6 +33,11 @@ const menuItems = [
     title: "Projetos PRONAS/PCD",
     url: "/projetos",
     icon: FileText,
+  },
+  {
+    title: "Base de Conhecimento", 
+    url: "/conhecimento",
+    icon: BrainCircuit,
   },
   {
     title: "Configurações",
@@ -74,6 +81,23 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="p-2">
+        <SidebarSeparator />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton>
+              <UserCircle />
+              <span>Meu Perfil</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton>
+              <LogOut />
+              <span>Sair</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   )
 }

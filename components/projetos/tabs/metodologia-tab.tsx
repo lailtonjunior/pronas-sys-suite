@@ -1,27 +1,23 @@
 "use client"
 
-import { useForm } from "react-hook-form"
+import { useFormContext, Controller } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-interface MetodologiaTabProps {
-  projeto: any
-  onSave: (data: any) => void
-}
-
-export function MetodologiaTab({ projeto, onSave }: MetodologiaTabProps) {
-  const { register, handleSubmit, setValue } = useForm({
-    defaultValues: projeto,
-  })
+export function MetodologiaTab({ onSave }: { onSave: (data: any) => void }) {
+  const { register, handleSubmit, control } = useFormContext() // Usando o contexto
 
   const onSubmit = (data: any) => {
+    // A função onSave ainda pode ser chamada, mas os dados vêm do handleSubmit principal
+    // Esta função pode ser simplificada ou removida se o botão for movido para o componente pai.
     onSave(data)
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    // Removido o <form> daqui, pois agora ele está no componente pai 'projeto-form.tsx'
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-4">Metodologia de Atendimento</h3>
 
@@ -50,15 +46,21 @@ export function MetodologiaTab({ projeto, onSave }: MetodologiaTabProps) {
 
           <div>
             <Label htmlFor="registroCIHA">Registro no CIHA (Centro Integrado de Habilitação e Reabilitação)</Label>
-            <Select value={projeto.registroCIHA} onValueChange={(value) => setValue("registroCIHA", value)}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Selecione uma opção" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sim">Sim</SelectItem>
-                <SelectItem value="nao-se-aplica">Não se aplica</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="registroCIHA"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Selecione uma opção" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sim">Sim</SelectItem>
+                    <SelectItem value="nao-se-aplica">Não se aplica</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
           <div>
@@ -75,8 +77,9 @@ export function MetodologiaTab({ projeto, onSave }: MetodologiaTabProps) {
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit">Salvar Metodologia</Button>
+        {/* Este botão agora salva o formulário inteiro, o que é um comportamento esperado */}
+        <Button type="button" onClick={handleSubmit(onSubmit)}>Salvar Metodologia</Button>
       </div>
-    </form>
+    </div>
   )
 }

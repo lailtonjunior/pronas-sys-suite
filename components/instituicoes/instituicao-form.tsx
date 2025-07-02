@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { useStore } from "@/lib/store"
 import { useToast } from "@/hooks/use-toast"
 import { formatCNPJ, formatPhone, formatCEP } from "@/lib/utils"
+import { useState } from "react"
+import { Search } from "lucide-react"
 
 interface InstituicaoFormData {
   razaoSocial: string
@@ -40,6 +42,7 @@ export function InstituicaoForm({ onCancel }: InstituicaoFormProps) {
   } = useForm<InstituicaoFormData>()
   const { addInstituicao } = useStore()
   const { toast } = useToast()
+  const [isFetching, setIsFetching] = useState(false)
 
   const onSubmit = (data: InstituicaoFormData) => {
     addInstituicao({
@@ -56,15 +59,77 @@ export function InstituicaoForm({ onCancel }: InstituicaoFormProps) {
     onCancel()
   }
 
+  const handleFetchDataByCnpj = async () => {
+    const cnpj = watch("cnpj")
+    if (!cnpj || cnpj.replace(/\D/g, '').length !== 14) {
+      toast({
+        variant: "destructive",
+        title: "CNPJ inválido",
+        description: "Por favor, preencha um CNPJ válido com 14 dígitos.",
+      })
+      return
+    }
+
+    setIsFetching(true)
+    // Simulação de chamada a uma API da Receita Federal
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Dados simulados
+    setValue("razaoSocial", "ASSOCIAÇÃO DE PAIS E AMIGOS DOS EXCEPCIONAIS DE SÃO PAULO")
+    setValue("nomeFantasia", "APAE DE SÃO PAULO")
+    setValue("endereco", "Rua dos Bobos, Nº 0")
+    setValue("cidade", "São Paulo")
+    setValue("estado", "SP")
+    setValue("cep", "01000-000")
+    setValue("telefone", "(11) 5080-7000")
+    setValue("email", "contato@apaesp.org.br")
+    setIsFetching(false)
+
+    toast({
+      title: "Dados preenchidos",
+      description: "As informações da instituição foram carregadas com sucesso.",
+    })
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Cadastro de Nova Instituição</CardTitle>
-        <CardDescription>Preencha os dados da instituição cliente</CardDescription>
+        <CardDescription>Preencha os dados da instituição. Para agilizar, preencha o CNPJ e clique em "Buscar Dados".</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <Label htmlFor="cnpj">CNPJ *</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="cnpj"
+                  {...register("cnpj", { required: "CNPJ é obrigatório" })}
+                  onChange={(e) => {
+                    const formatted = formatCNPJ(e.target.value)
+                    setValue("cnpj", formatted)
+                  }}
+                  placeholder="00.000.000/0000-00"
+                  className={errors.cnpj ? "border-red-500" : ""}
+                />
+                <Button type="button" variant="outline" size="icon" onClick={handleFetchDataByCnpj} disabled={isFetching}>
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+              {errors.cnpj && <p className="text-sm text-red-500 mt-1">{errors.cnpj.message}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="cnes">CNES *</Label>
+              <Input
+                id="cnes"
+                {...register("cnes", { required: "CNES é obrigatório" })}
+                className={errors.cnes ? "border-red-500" : ""}
+              />
+              {errors.cnes && <p className="text-sm text-red-500 mt-1">{errors.cnes.message}</p>}
+            </div>
+
             <div className="md:col-span-2">
               <Label htmlFor="razaoSocial">Razão Social *</Label>
               <Input
@@ -79,32 +144,7 @@ export function InstituicaoForm({ onCancel }: InstituicaoFormProps) {
               <Label htmlFor="nomeFantasia">Nome Fantasia</Label>
               <Input id="nomeFantasia" {...register("nomeFantasia")} />
             </div>
-
-            <div>
-              <Label htmlFor="cnpj">CNPJ *</Label>
-              <Input
-                id="cnpj"
-                {...register("cnpj", { required: "CNPJ é obrigatório" })}
-                onChange={(e) => {
-                  const formatted = formatCNPJ(e.target.value)
-                  setValue("cnpj", formatted)
-                }}
-                placeholder="00.000.000/0000-00"
-                className={errors.cnpj ? "border-red-500" : ""}
-              />
-              {errors.cnpj && <p className="text-sm text-red-500 mt-1">{errors.cnpj.message}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="cnes">CNES *</Label>
-              <Input
-                id="cnes"
-                {...register("cnes", { required: "CNES é obrigatório" })}
-                className={errors.cnes ? "border-red-500" : ""}
-              />
-              {errors.cnes && <p className="text-sm text-red-500 mt-1">{errors.cnes.message}</p>}
-            </div>
-
+            
             <div>
               <Label htmlFor="telefone">Telefone *</Label>
               <Input
@@ -120,7 +160,7 @@ export function InstituicaoForm({ onCancel }: InstituicaoFormProps) {
               {errors.telefone && <p className="text-sm text-red-500 mt-1">{errors.telefone.message}</p>}
             </div>
 
-            <div>
+            <div className="md:col-span-2">
               <Label htmlFor="email">E-mail *</Label>
               <Input
                 id="email"
@@ -181,6 +221,9 @@ export function InstituicaoForm({ onCancel }: InstituicaoFormProps) {
               />
               {errors.cep && <p className="text-sm text-red-500 mt-1">{errors.cep.message}</p>}
             </div>
+            
+            <div className="md:col-span-2"></div>
+
 
             <div>
               <Label htmlFor="representanteLegal">Representante Legal *</Label>

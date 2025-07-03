@@ -14,9 +14,9 @@ import { Sparkles } from "lucide-react"
 import { useState } from "react"
 
 const camposAtuacao = [
-  "Atenção à saúde da pessoa com deficiência",
-  "Apoio à formação, treinamento e aperfeiçoamento de recursos humanos em todos os níveis",
-  "Realização de pesquisas clínicas, epidemiológicas e experimentais",
+  "I – Prestação de serviços médico‑assistenciais",
+  "II – Formação, treinamento e aperfeiçoamento de recursos humanos em todos os níveis",
+  "III – Realização de pesquisas clínicas, epidemiológicas, experimentais e sócio‑antropológicas",
 ];
 
 const art10Data = [

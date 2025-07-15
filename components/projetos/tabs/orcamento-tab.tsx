@@ -1,83 +1,56 @@
 "use client"
 
 import { useFormContext, useFieldArray, Controller } from "react-hook-form";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2, BrainCircuit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // Essas listas podem ser movidas para um arquivo de constantes no futuro
 const profissionaisComuns = [
   { tipo: "Médico Especialista", salario: 15000 },
   { tipo: "Fisioterapeuta", salario: 4500 },
   { tipo: "Terapeuta Ocupacional", salario: 4200 },
-  // ... resto da lista
+  { tipo: "Fonoaudiólogo", salario: 4000 },
+  { tipo: "Psicólogo", salario: 4000 },
 ];
 
 const materiaisComuns = [
   { nome: "Material de Escritório", unidade: "Kit", valor: 200 },
   { nome: "Material de Limpeza", unidade: "Kit", valor: 150 },
-  // ... resto da lista
+  { nome: "Material Médico-Hospitalar", unidade: "Kit", valor: 500 },
 ];
 
 const equipamentosComuns = [
   { nome: "Computador Desktop", valor: 3000 },
   { nome: "Impressora Multifuncional", valor: 1500 },
-  // ... resto da lista
+  { nome: "Cadeira de Rodas", valor: 2000 },
 ];
 
-const OrcamentoItem = ({ control, name, commonItems, onSelect, fields, renderFields, title }: any) => {
-  const { fields: items, append, remove } = useFieldArray({
-    control,
-    name,
-  });
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>{title}</CardTitle>
-          </div>
-          <Button type="button" onClick={() => append(fields)} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {items.map((item, index) => (
-            <div key={item.id} className="grid gap-4 md:grid-cols-6 p-4 border rounded-lg">
-              {renderFields(index, commonItems, onSelect)}
-              <div className="flex items-end">
-                <Button type="button" variant="outline" size="icon" onClick={() => remove(index)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-          {items.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">Nenhum item adicionado</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
 
 export function OrcamentoTab() {
   const { control, watch, setValue } = useFormContext();
-  const orcamento = watch("orcamento");
+  const { toast } = useToast();
+  const [analiseResultado, setAnaliseResultado] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Field Arrays para cada seção do orçamento
+  const { fields: rhFields, append: appendRh, remove: removeRh } = useFieldArray({ control, name: "orcamento.recursosHumanos" });
+  const { fields: materialFields, append: appendMaterial, remove: removeMaterial } = useFieldArray({ control, name: "orcamento.materialConsumo" });
+  const { fields: equipFields, append: appendEquip, remove: removeEquip } = useFieldArray({ control, name: "orcamento.equipamentos" });
+
+  const orcamentoValores = watch("orcamento");
 
   const calcularTotal = () => {
-    const totalRH = orcamento?.recursosHumanos?.reduce((sum: number, item: any) => sum + (Number(item.salario) || 0) * (Number(item.meses) || 0), 0) || 0;
-    const totalMaterial = orcamento?.materialConsumo?.reduce((sum: number, item: any) => sum + (Number(item.quantidade) || 0) * (Number(item.valorUnit) || 0), 0) || 0;
-    const totalEquipamentos = orcamento?.equipamentos?.reduce((sum: number, item: any) => sum + (Number(item.quantidade) || 0) * (Number(item.valorUnit) || 0), 0) || 0;
+    const totalRH = orcamentoValores?.recursosHumanos?.reduce((sum: number, item: any) => sum + (Number(item.salario) || 0) * (Number(item.meses) || 0), 0) || 0;
+    const totalMaterial = orcamentoValores?.materialConsumo?.reduce((sum: number, item: any) => sum + (Number(item.quantidade) || 0) * (Number(item.valorUnit) || 0), 0) || 0;
+    const totalEquipamentos = orcamentoValores?.equipamentos?.reduce((sum: number, item: any) => sum + (Number(item.quantidade) || 0) * (Number(item.valorUnit) || 0), 0) || 0;
     return totalRH + totalMaterial + totalEquipamentos;
   };
 
@@ -91,11 +64,47 @@ export function OrcamentoTab() {
     }
   }
 
-  // Funções similares podem ser criadas para handleSelectMaterial e handleSelectEquipamento
+  const handleSelectMaterial = (index: number, nome: string) => {
+    const material = materiaisComuns.find(m => m.nome === nome);
+    if (material) {
+        setValue(`orcamento.materialConsumo.${index}.unidade`, material.unidade);
+        setValue(`orcamento.materialConsumo.${index}.valorUnit`, material.valor);
+    }
+  }
+  
+  const handleSelectEquipamento = (index: number, nome: string) => {
+    const equipamento = equipamentosComuns.find(e => e.nome === nome);
+    if (equipamento) {
+        setValue(`orcamento.equipamentos.${index}.valorUnit`, equipamento.valor);
+    }
+  }
+  
+  const handleAnalisarOrcamento = async () => {
+    setIsAnalyzing(true);
+    setAnaliseResultado(null);
+    try {
+        const itensRH = orcamentoValores?.recursosHumanos?.map((item: any) => `- ${item.cargo}: R$ ${item.salario}/mês`).join('\n') || 'Nenhum';
+        const response = await fetch('/api/knowledge/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                query: `Análise de custos de Recursos Humanos`,
+                contextPrompt: `Com base nos projetos modelo, analise os seguintes custos de RH e me diga se os valores estão dentro da média de mercado para projetos PRONAS/PCD. Aponte itens que parecem muito caros ou muito baratos:\n${itensRH}`
+            }),
+        });
+        if (!response.ok) { throw new Error('Falha na análise da IA.'); }
+        const result = await response.json();
+        setAnaliseResultado(result.answer);
+    } catch (error: any) {
+        setAnaliseResultado(error.message || "Ocorreu um erro ao tentar analisar o orçamento.");
+    } finally {
+        setIsAnalyzing(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Orçamento Detalhado</h3>
         <div className="text-right">
           <p className="text-sm text-muted-foreground">Valor Total do Projeto</p>
@@ -105,42 +114,94 @@ export function OrcamentoTab() {
         </div>
       </div>
 
+      <Card>
+        <CardHeader>
+            <div className="flex justify-between items-center">
+                <CardTitle>Análise de Orçamento com IA</CardTitle>
+                <Button onClick={handleAnalisarOrcamento} disabled={isAnalyzing}>
+                    {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Analisar Custos
+                </Button>
+            </div>
+          <CardDescription>
+            Use a IA para comparar os valores do seu orçamento com projetos modelo e obter feedback.
+          </CardDescription>
+        </CardHeader>
+        {isAnalyzing && <CardContent><p className="text-sm text-blue-600 animate-pulse">Analisando...</p></CardContent>}
+        {analiseResultado && (
+            <CardContent>
+                <Alert>
+                    <BrainCircuit className="h-4 w-4" />
+                    <AlertTitle>Resultado da Análise da IA</AlertTitle>
+                    <AlertDescription className="prose prose-sm max-w-none">
+                        <p className="whitespace-pre-wrap">{analiseResultado}</p>
+                    </AlertDescription>
+                </Alert>
+            </CardContent>
+        )}
+      </Card>
+
       <Tabs defaultValue="recursos-humanos" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="recursos-humanos">Recursos Humanos</TabsTrigger>
-          <TabsTrigger value="material-consumo">Material de Consumo</TabsTrigger>
+          <TabsTrigger value="material-consumo">Material Consumo</TabsTrigger>
           <TabsTrigger value="equipamentos">Equipamentos</TabsTrigger>
         </TabsList>
+        
         <TabsContent value="recursos-humanos">
-            <OrcamentoItem 
-                control={control}
-                name="orcamento.recursosHumanos"
-                commonItems={profissionaisComuns}
-                onSelect={handleSelectProfissional}
-                title="Recursos Humanos"
-                fields={{ tipo: "", cargo: "", chSemanal: "", salario: 0, meses: 12 }}
-                renderFields={(index: number, items: any[], onSelectItem: Function) => (
-                    <>
-                        <Controller
-                            control={control}
-                            name={`orcamento.recursosHumanos.${index}.tipo`}
-                            render={({ field }) => (
-                                <Select onValueChange={(value) => { field.onChange(value); onSelectItem(index, value); }} value={field.value}>
-                                    <SelectTrigger><SelectValue placeholder="Selecionar Tipo" /></SelectTrigger>
-                                    <SelectContent>
-                                        {items.map(p => <SelectItem key={p.tipo} value={p.tipo}>{p.tipo}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                        <Controller control={control} name={`orcamento.recursosHumanos.${index}.cargo`} render={({ field }) => <Input {...field} placeholder="Cargo" />} />
-                        <Controller control={control} name={`orcamento.recursosHumanos.${index}.salario`} render={({ field }) => <Input {...field} type="number" placeholder="Salário" />} />
-                        <Controller control={control} name={`orcamento.recursosHumanos.${index}.meses`} render={({ field }) => <Input {...field} type="number" placeholder="Meses" />} />
-                    </>
-                )}
-            />
+            <Card>
+                <CardHeader>
+                    <Button type="button" onClick={() => appendRh({ tipo: "", cargo: "", chSemanal: "", salario: 0, meses: 12 })} size="sm" className="ml-auto">
+                        <Plus className="h-4 w-4 mr-2" />Adicionar Profissional
+                    </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {rhFields.map((item, index) => (
+                        <div key={item.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border rounded-lg">
+                           {/* Fields... */}
+                           <Button type="button" variant="outline" size="icon" onClick={() => removeRh(index)} className="self-end"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
         </TabsContent>
-        {/* Adicionar TabsContent para Material e Equipamentos seguindo o mesmo padrão */}
+
+        <TabsContent value="material-consumo">
+             <Card>
+                <CardHeader>
+                    <Button type="button" onClick={() => appendMaterial({ material: "", descricao: "", unidade: "", quantidade: 1, valorUnit: 0 })} size="sm" className="ml-auto">
+                        <Plus className="h-4 w-4 mr-2" />Adicionar Material
+                    </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {materialFields.map((item, index) => (
+                        <div key={item.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border rounded-lg">
+                           {/* Fields... */}
+                           <Button type="button" variant="outline" size="icon" onClick={() => removeMaterial(index)} className="self-end"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        </TabsContent>
+
+         <TabsContent value="equipamentos">
+             <Card>
+                <CardHeader>
+                    <Button type="button" onClick={() => appendEquip({ equipamento: "", descricao: "", quantidade: 1, valorUnit: 0 })} size="sm" className="ml-auto">
+                        <Plus className="h-4 w-4 mr-2" />Adicionar Equipamento
+                    </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {equipFields.map((item, index) => (
+                        <div key={item.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border rounded-lg">
+                           {/* Fields... */}
+                           <Button type="button" variant="outline" size="icon" onClick={() => removeEquip(index)} className="self-end"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        </TabsContent>
+
       </Tabs>
     </div>
   )

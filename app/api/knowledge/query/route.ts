@@ -2,79 +2,81 @@ import { NextResponse } from 'next/server';
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { Chroma } from "@langchain/community/vectorstores/chroma";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import path from "path";
+import { ChromaClient } from "chromadb";
 
-const CHROMA_DB_PATH = "./chroma_db";
-const COLLECTION_NORMATIVAS = "pronas-normativas";
-const COLLECTION_PROJETOS_MODELO = "pronas-projetos-modelo";
+export const runtime = 'nodejs';
 
-async function performSimilaritySearch(vectorStore: Chroma, query: string, k: number = 2) {
+const CHROMA_DB_PATH = path.join(process.cwd(), "chroma_db");
+
+const collections = {
+    normativas: "pronas-normativas",
+    diligencias: "pronas-diligencias",
+    assistencial: "pronas-projetos-assistencial",
+    capacitacao: "pronas-projetos-capacitacao"
+};
+
+async function searchCollection(embeddings: GoogleGenerativeAIEmbeddings, collectionName: string, query: string, k: number = 2) {
     try {
+        // **A CORREÇÃO ESTÁ AQUI**
+        const client = new ChromaClient({ path: CHROMA_DB_PATH });
+        const collection = await client.getCollection({ 
+            name: collectionName,
+            embeddingFunction: { generate: (texts: string[]) => embeddings.embedDocuments(texts) }
+        });
+
+        const vectorStore = new Chroma(embeddings, { collection });
         const results = await vectorStore.similaritySearch(query, k);
         return results.map(doc => doc.pageContent).join("\n\n---\n\n");
-    } catch (error) {
-        // Ignora o erro se a coleção não existir ainda
-        if (error instanceof Error && error.message.includes("does not exist")) {
-            console.warn(`Coleção não encontrada ao buscar:`, error.message);
-            return "Nenhum documento encontrado nesta categoria.";
-        }
-        throw error; // Lança outros erros
+    } catch (e) {
+        console.warn(`Aviso ao buscar na coleção "${collectionName}":`, (e as Error).message);
+        return "Nenhum documento encontrado nesta categoria.";
     }
 }
 
 export async function POST(req: Request) {
     try {
-        const { query, contextPrompt } = await req.json();
+        const { query, contextPrompt, projectType } = await req.json();
 
         if (!query) {
             return NextResponse.json({ error: "A consulta (query) é obrigatória." }, { status: 400 });
         }
 
-        const embeddings = new GoogleGenerativeAIEmbeddings({
-            modelName: "embedding-001",
-            apiKey: process.env.GOOGLE_API_KEY,
-        });
+        const embeddings = new GoogleGenerativeAIEmbeddings({ apiKey: process.env.GOOGLE_API_KEY });
+        const projetoModeloCollection = projectType === 'capacitacao' ? collections.capacitacao : collections.assistencial;
 
-        // 1. Conectar-se às duas coleções
-        const vectorStoreNormativas = new Chroma(embeddings, {
-            collectionName: COLLECTION_NORMATIVAS,
-            url: CHROMA_DB_PATH,
-        });
-
-        const vectorStoreProjetos = new Chroma(embeddings, {
-            collectionName: COLLECTION_PROJETOS_MODELO,
-            url: CHROMA_DB_PATH,
-        });
-
-        // 2. Buscar por documentos relevantes em ambas as coleções
-        const [normativasContext, projetosContext] = await Promise.all([
-            performSimilaritySearch(vectorStoreNormativas, `Regras e diretrizes para: ${query}`),
-            performSimilaritySearch(vectorStoreProjetos, `Exemplos de texto sobre: ${query}`)
+        const [normativasContext, diligenciasContext, projetosContext] = await Promise.all([
+            searchCollection(embeddings, collections.normativas, `Regras para: ${query}`),
+            searchCollection(embeddings, collections.diligencias, `Atenção sobre: ${query}`),
+            searchCollection(embeddings, projetoModeloCollection, `Exemplos de: ${query}`)
         ]);
 
-        // 3. Montar o prompt final para a IA com os dois contextos
         const prompt = `
-            Você é um especialista sênior na elaboração de projetos para o PRONAS/PCD.
-            Sua tarefa é gerar um texto técnico e bem fundamentado para o tópico solicitado, seguindo rigorosamente as regras e se inspirando nos exemplos fornecidos.
-
-            **REGRAS OBRIGATÓRIAS (Extraídas de Leis e Diretrizes):**
+            Você é um consultor especialista na elaboração de projetos para o PRONAS/PCD. Sua tarefa é gerar um texto técnico e persuasivo para o tópico solicitado, usando as informações abaixo.
+            
+            **REGRAS OBRIGATÓRIAS (Extraídas de Leis e Normas):**
             ---
             ${normativasContext}
             ---
 
-            **EXEMPLOS DE ALTA QUALIDADE (Extraídos de Projetos Aprovados):**
+            **EXEMPLOS DE SUCESSO (Extraídos de Projetos Aprovados):**
             ---
             ${projetosContext}
             ---
 
+            **PONTOS DE ATENÇÃO (Aprendizado com Diligências):**
+            ---
+            ${diligenciasContext}
+            ---
+
             **TAREFA:**
-            Com base nas REGRAS e nos EXEMPLOS acima, ${contextPrompt || 'gere um texto detalhado e profissional sobre o seguinte tópico:'} "${query}".
-            Seu texto deve ser original, coeso e aplicar as regras aos exemplos de forma prática.
+            Combine todo esse conhecimento para responder à seguinte solicitação:
+            ${contextPrompt || 'Gere um texto detalhado sobre o tópico:'} "${query}".
+            Seu texto final deve ser original, preciso e aplicar as regras aos exemplos, evitando os erros apontados nas diligências.
         `;
         
-        // 4. Chamar a LLM da Google para gerar a resposta
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const answer = response.text();

@@ -9,6 +9,14 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-}
+  // Adicione este bloco para resolver o erro do ChromaDB
+  webpack: (config) => {
+    config.externals = [...config.externals, {
+      '@chroma-core/default-embed': 'commonjs @chroma-core/default-embed',
+    }];
 
-export default nextConfig
+    return config;
+  },
+};
+
+export default nextConfig;

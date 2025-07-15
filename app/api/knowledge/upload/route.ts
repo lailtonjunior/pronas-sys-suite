@@ -1,74 +1,73 @@
 import { NextResponse } from 'next/server';
-import pdf from 'pdf-parse';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { Chroma } from "@langchain/community/vectorstores/chroma";
+import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import path from "path";
+import { ChromaClient } from "chromadb";
 
-// Local onde o banco de dados de vetores será salvo
-const CHROMA_DB_PATH = "./chroma_db";
+export const runtime = 'nodejs';
 
-const collectionNames = {
-    'Normativa': 'pronas-normativas',
-    'Projeto Modelo': 'pronas-projetos-modelo'
+const CHROMA_DB_PATH = path.join(process.cwd(), "chroma_db");
+
+const collectionMap = {
+    'Projeto Assistencial': 'pronas-projetos-assistencial',
+    'Projeto Capacitação': 'pronas-projetos-capacitacao',
+    'Diligência': 'pronas-diligencias',
+    'Normativa': 'pronas-normativas'
 };
 
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
-    const category = formData.get('category') as 'Normativa' | 'Projeto Modelo' | null;
+    const category = formData.get('category') as keyof typeof collectionMap | null;
 
-    if (!file) {
-      return NextResponse.json({ error: "Nenhum arquivo enviado." }, { status: 400 });
-    }
-    if (!category || !collectionNames[category]) {
-        return NextResponse.json({ error: "Categoria de documento inválida." }, { status: 400 });
+    if (!file || !category || !collectionMap[category]) {
+      return NextResponse.json({ error: "Arquivo ou categoria inválida." }, { status: 400 });
     }
 
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const pdfData = await pdf(fileBuffer);
+    const loader = new PDFLoader(file);
+    const pageLevelDocs = await loader.load();
+
+    const collectionName = collectionMap[category];
+    const metadata = { source: file.name, category, uploadDate: new Date().toISOString() };
     
-    if (!pdfData.text) {
-        return NextResponse.json({ error: "Não foi possível extrair texto do PDF." }, { status: 400 });
-    }
+    const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
+    const docs = await splitter.splitDocuments(pageLevelDocs);
 
-    // Adiciona metadados ao documento antes de dividi-lo
-    const metadata = {
-        source: file.name,
-        category: category,
-        uploadDate: new Date().toISOString()
-    };
-    
-    const splitter = new RecursiveCharacterTextSplitter({
-      chunkSize: 1000,
-      chunkOverlap: 200,
+    docs.forEach(doc => {
+        doc.metadata = { ...doc.metadata, ...metadata };
     });
-    
-    // O splitter herdará os metadados para cada chunk
-    const docs = await splitter.createDocuments([pdfData.text], [metadata]);
 
     const embeddings = new GoogleGenerativeAIEmbeddings({
         modelName: "embedding-001",
         apiKey: process.env.GOOGLE_API_KEY,
     });
     
-    // Usa o nome da coleção dinamicamente com base na categoria
-    const collectionName = collectionNames[category];
-    
-    await Chroma.fromDocuments(docs, embeddings, {
-        collectionName: collectionName,
-        url: CHROMA_DB_PATH,
+    // **A CORREÇÃO ESTÁ AQUI**
+    // 1. Inicializamos o cliente do ChromaDB
+    const client = new ChromaClient({ path: CHROMA_DB_PATH });
+
+    // 2. Criamos ou obtemos a coleção, passando a NOSSA função de embedding
+    const collection = await client.getOrCreateCollection({
+      name: collectionName,
+      embeddingFunction: { generate: (texts: string[]) => embeddings.embedDocuments(texts) }
     });
 
+    // 3. O LangChain agora usa a coleção já configurada
+    const vectorStore = new Chroma(embeddings, { collection });
+    await vectorStore.addDocuments(docs);
+    
     console.log(`Documento '${file.name}' adicionado à coleção '${collectionName}'.`);
 
     return NextResponse.json({ 
         success: true, 
-        message: `Documento '${file.name}' adicionado à base de conhecimento de ${category}.` 
+        message: `Documento '${file.name}' processado e adicionado à base de ${category}.` 
     });
 
   } catch (error) {
     console.error("Erro no processamento do arquivo:", error);
-    return NextResponse.json({ error: "Erro interno no servidor ao processar o arquivo." }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno no servidor." }, { status: 500 });
   }
 }

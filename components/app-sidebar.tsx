@@ -1,6 +1,6 @@
 "use client"
 
-import { Building2, FileText, Home, Settings, Sparkles, UserCircle, LogOut, BrainCircuit } from "lucide-react"
+import { Building2, FileText, Home, Settings, Sparkles, UserCircle, LogOut, BrainCircuit, Database } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -35,9 +35,14 @@ const menuItems = [
     icon: FileText,
   },
   {
-    title: "Base de Conhecimento", 
+    title: "Base de Conhecimento",
     url: "/conhecimento",
     icon: BrainCircuit,
+  },
+  {
+    title: "Visualizador do DB", // Novo item
+    url: "/database",
+    icon: Database,
   },
   {
     title: "Configurações",

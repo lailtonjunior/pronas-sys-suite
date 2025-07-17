@@ -3,12 +3,8 @@ import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { Chroma } from "@langchain/community/vectorstores/chroma";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import path from "path";
-import { ChromaClient } from "chromadb";
 
 export const runtime = 'nodejs';
-
-const CHROMA_DB_PATH = path.join(process.cwd(), "chroma_db");
 
 const collectionMap = {
     'Projeto Assistencial': 'pronas-projetos-assistencial',
@@ -29,15 +25,19 @@ export async function POST(req: Request) {
 
     const loader = new PDFLoader(file);
     const pageLevelDocs = await loader.load();
-
     const collectionName = collectionMap[category];
-    const metadata = { source: file.name, category, uploadDate: new Date().toISOString() };
     
     const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
     const docs = await splitter.splitDocuments(pageLevelDocs);
 
-    docs.forEach(doc => {
-        doc.metadata = { ...doc.metadata, ...metadata };
+    const docsWithCleanMetadata = docs.map(doc => {
+      doc.metadata = {
+        source: file.name,
+        category: category,
+        pageNumber: doc.metadata.loc?.pageNumber ?? 0,
+        uploadDate: new Date().toISOString()
+      };
+      return doc;
     });
 
     const embeddings = new GoogleGenerativeAIEmbeddings({
@@ -45,21 +45,12 @@ export async function POST(req: Request) {
         apiKey: process.env.GOOGLE_API_KEY,
     });
     
-    // **A CORREÇÃO ESTÁ AQUI**
-    // 1. Inicializamos o cliente do ChromaDB
-    const client = new ChromaClient({ path: CHROMA_DB_PATH });
-
-    // 2. Criamos ou obtemos a coleção, passando a NOSSA função de embedding
-    const collection = await client.getOrCreateCollection({
-      name: collectionName,
-      embeddingFunction: { generate: (texts: string[]) => embeddings.embedDocuments(texts) }
+    // Conexão simplificada: LangChain usará as variáveis de ambiente para se conectar
+    await Chroma.fromDocuments(docsWithCleanMetadata, embeddings, {
+        collectionName: collectionName,
     });
 
-    // 3. O LangChain agora usa a coleção já configurada
-    const vectorStore = new Chroma(embeddings, { collection });
-    await vectorStore.addDocuments(docs);
-    
-    console.log(`Documento '${file.name}' adicionado à coleção '${collectionName}'.`);
+    console.log(`Documento '${file.name}' adicionado com sucesso à coleção '${collectionName}'.`);
 
     return NextResponse.json({ 
         success: true, 

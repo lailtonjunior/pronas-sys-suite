@@ -1,27 +1,16 @@
 "use client"
 
-import { useForm } from "react-hook-form"
-import { Button } from "@/components/ui/button"
+import { useFormContext } from "react-hook-form" // Importado useFormContext
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
-interface PublicoAlvoTabProps {
-  projeto: any
-  onSave: (data: any) => void
-}
-
-export function PublicoAlvoTab({ projeto, onSave }: PublicoAlvoTabProps) {
-  const { register, handleSubmit } = useForm({
-    defaultValues: projeto,
-  })
-
-  const onSubmit = (data: any) => {
-    onSave(data)
-  }
+export function PublicoAlvoTab() {
+  const { register } = useFormContext() // Utiliza o contexto do formulário pai
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    // O <form> e o botão de submit foram removidos
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-4">Caracterização do Público-Alvo</h3>
 
@@ -78,10 +67,6 @@ export function PublicoAlvoTab({ projeto, onSave }: PublicoAlvoTabProps) {
           </p>
         </div>
       </div>
-
-      <div className="flex justify-end">
-        <Button type="submit">Salvar Público-Alvo</Button>
-      </div>
-    </form>
+    </div>
   )
 }

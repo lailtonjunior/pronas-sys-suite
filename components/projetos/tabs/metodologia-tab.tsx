@@ -6,17 +6,11 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-export function MetodologiaTab({ onSave }: { onSave: (data: any) => void }) {
-  const { register, handleSubmit, control } = useFormContext() // Usando o contexto
-
-  const onSubmit = (data: any) => {
-    // A função onSave ainda pode ser chamada, mas os dados vêm do handleSubmit principal
-    // Esta função pode ser simplificada ou removida se o botão for movido para o componente pai.
-    onSave(data)
-  }
+export function MetodologiaTab() { // Removida a prop onSave
+  const { register, control } = useFormContext() // Utiliza o contexto do formulário pai
 
   return (
-    // Removido o <form> daqui, pois agora ele está no componente pai 'projeto-form.tsx'
+    // O <form> e o botão de submit foram removidos
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-4">Metodologia de Atendimento</h3>
@@ -74,11 +68,6 @@ export function MetodologiaTab({ onSave }: { onSave: (data: any) => void }) {
             />
           </div>
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        {/* Este botão agora salva o formulário inteiro, o que é um comportamento esperado */}
-        <Button type="button" onClick={handleSubmit(onSubmit)}>Salvar Metodologia</Button>
       </div>
     </div>
   )

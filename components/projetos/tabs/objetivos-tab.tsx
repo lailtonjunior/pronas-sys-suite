@@ -1,28 +1,17 @@
 "use client"
 
-import { useForm } from "react-hook-form"
+import { useFormContext } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Sparkles } from "lucide-react"
 import { useState } from "react"
 
-interface ObjetivosTabProps {
-  projeto: any
-  onSave: (data: any) => void
-}
-
-export function ObjetivosTab({ projeto, onSave }: ObjetivosTabProps) {
-  const { register, handleSubmit, watch, setValue } = useForm({
-    defaultValues: projeto,
-  })
+export function ObjetivosTab() {
+  const { register, watch, setValue } = useFormContext() // Utiliza o contexto do formulário pai
   const [isGenerating, setIsGenerating] = useState(false)
 
   const objetivoGeral = watch("objetivoGeral")
-
-  const onSubmit = (data: any) => {
-    onSave(data)
-  }
 
   const handleGenerateObjetivos = async () => {
     if (!objetivoGeral) {
@@ -38,7 +27,8 @@ export function ObjetivosTab({ projeto, onSave }: ObjetivosTabProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    // O <form> e o botão de submit foram removidos daqui. A aba agora é apenas um conjunto de campos.
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-4">Objetivos do Projeto</h3>
 
@@ -78,10 +68,6 @@ export function ObjetivosTab({ projeto, onSave }: ObjetivosTabProps) {
           </div>
         </div>
       </div>
-
-      <div className="flex justify-end">
-        <Button type="submit">Salvar Objetivos</Button>
-      </div>
-    </form>
+    </div>
   )
 }

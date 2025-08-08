@@ -1,0 +1,95 @@
+// prisma/schema.prisma
+// Este arquivo define o esquema do nosso banco de dados.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Modelo para Instituições
+model Institution {
+  id        String    @id @default(cuid())
+  name      String
+  cnpj      String    @unique
+  address   Json?
+  contact   Json?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projects  Project[]
+  owner     User      @relation(fields: [ownerId], references: [id])
+  ownerId   String
+}
+
+// Modelo para Projetos
+model Project {
+  id            String      @id @default(cuid())
+  title         String
+  status        String      @default("Em Elaboração")
+  sections      Json? // Armazenará dados das abas: justificativa, objetivos, etc.
+  budget_lines  Json? // Armazenará as linhas do orçamento
+  attachments   Json? // Armazenará referências aos anexos
+  ai_audit      Json? // Armazenará o resultado da auditoria da IA
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  institution   Institution @relation(fields: [institutionId], references: [id])
+  institutionId String
+  author        User        @relation(fields: [authorId], references: [id])
+  authorId      String
+}
+
+// --- Modelos para NextAuth.js ---
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String        @id @default(cuid())
+  name          String?
+  email         String?       @unique
+  emailVerified DateTime?
+  image         String?
+  password_hash String?
+  roles         String[]      @default(["consultor"])
+  accounts      Account[]
+  sessions      Session[]
+  createdInstitutions Institution[]
+  createdProjects Project[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+

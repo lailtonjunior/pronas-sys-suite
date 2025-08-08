@@ -5,5 +5,5 @@ services:
       - "8001:8000"
     volumes:
       - ./chroma_data:/chroma/.chroma/index
-    # CORREÇÃO FINAL: Passando os comandos diretamente para o servidor
-    command: "--host 0.0.0.0 --port 8000 --proxy-headers --log-path /chroma/.chroma/index/chroma.log --server.http-cors-allow-origins '[\"http://localhost:3000\", \"http://localhost:3001\"]'"
+    # CORREÇÃO FINAL: Comando simplificado para a nova versão do ChromaDB
+    command: "run --host 0.0.0.0 --port 8000"

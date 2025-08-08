@@ -5,9 +5,13 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    // Conexão simplificada: O cliente usará as variáveis de ambiente
-    const client = new ChromaClient();
+    // Conexão utilizando o novo método recomendado (host e port)
+    const client = new ChromaClient({ 
+        host: process.env.CHROMA_SERVER_HOST,
+        port: process.env.CHROMA_SERVER_HTTP_PORT 
+    });
     
+    // O resto do arquivo permanece igual...
     const collections = await client.listCollections();
 
     const collectionsWithCount = await Promise.all(

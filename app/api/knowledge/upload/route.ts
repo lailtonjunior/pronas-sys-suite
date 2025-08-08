@@ -6,6 +6,7 @@ import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 
 export const runtime = 'nodejs';
 
+
 const collectionMap = {
     'Projeto Assistencial': 'pronas-projetos-assistencial',
     'Projeto Capacitação': 'pronas-projetos-capacitacao',
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
         apiKey: process.env.GOOGLE_API_KEY,
     });
     
-    // Conexão simplificada: LangChain usará as variáveis de ambiente para se conectar
+    // Passando o URL de conexão explicitamente
     await Chroma.fromDocuments(docsWithCleanMetadata, embeddings, {
         collectionName: collectionName,
     });

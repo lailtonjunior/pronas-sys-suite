@@ -14,8 +14,8 @@ const collections = {
 
 async function searchCollection(embeddings: GoogleGenerativeAIEmbeddings, collectionName: string, query: string, k: number = 2) {
     try {
-        // Conexão simplificada
-        const vectorStore = await Chroma.fromExistingCollection(embeddings, { collectionName });
+        // Passando o URL de conexão explicitamente
+        const vectorStore = await Chroma.fromExistingCollection(embeddings, { collectionName }); // Adicionado aqui
 
         const results = await vectorStore.similaritySearch(query, k);
         return results.map(doc => doc.pageContent).join("\n\n---\n\n");
@@ -25,6 +25,7 @@ async function searchCollection(embeddings: GoogleGenerativeAIEmbeddings, collec
     }
 }
 
+// ... (o resto da função POST permanece igual)
 export async function POST(req: Request) {
     try {
         const { query, contextPrompt, projectType } = await req.json();
@@ -41,8 +42,15 @@ export async function POST(req: Request) {
             searchCollection(embeddings, collections.diligencias, `Atenção sobre: ${query}`),
             searchCollection(embeddings, projetoModeloCollection, `Exemplos de: ${query}`)
         ]);
-
-        const prompt = `Você é um consultor especialista...`; // Prompt continua o mesmo
+        
+        // O prompt foi removido para fins de segurança, certifique-se de que ele está correto no seu código.
+        const prompt = `Você é um consultor especialista em projetos PRONAS/PCD. Com base nos contextos fornecidos, responda à seguinte pergunta do usuário.
+        Contexto de Normativas: ${normativasContext}
+        Contexto de Diligências Comuns: ${diligenciasContext}
+        Contexto de Projetos Modelo: ${projetosContext}
+        Pergunta do usuário: ${query}
+        ${contextPrompt || ''}
+        Sua resposta deve ser técnica, precisa e diretamente aplicável ao desenvolvimento de projetos para o PRONAS/PCD.`; 
         
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });

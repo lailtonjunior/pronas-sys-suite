@@ -1,5 +1,6 @@
 "use client"
 
+import { signOut } from "next-auth/react";
 import { Building2, FileText, Home, Settings, Sparkles, UserCircle, LogOut, BrainCircuit, Database } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -96,7 +97,8 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton>
+            {/* Adicione o onClick para chamar a função signOut */}
+            <SidebarMenuButton onClick={() => signOut({ callbackUrl: '/login' })}>
               <LogOut />
               <span>Sair</span>
             </SidebarMenuButton>

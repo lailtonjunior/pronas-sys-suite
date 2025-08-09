@@ -1,3 +1,6 @@
+// components/instituicoes/instituicoes-manager.tsx
+// Componente ATUALIZADO para passar a prop `onSuccess` para o formulário.
+
 "use client"
 
 import { useState } from "react"
@@ -8,6 +11,13 @@ import { InstituicoesList } from "./instituicoes-list"
 
 export function InstituicoesManager() {
   const [showForm, setShowForm] = useState(false)
+  // Adiciona um estado para forçar a re-renderização da lista
+  const [key, setKey] = useState(Date.now()) 
+
+  const handleSuccess = () => {
+    setShowForm(false);
+    setKey(Date.now()); // Muda a chave para forçar o re-fetch da lista
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -22,7 +32,11 @@ export function InstituicoesManager() {
         </Button>
       </div>
 
-      {showForm ? <InstituicaoForm onCancel={() => setShowForm(false)} /> : <InstituicoesList />}
+      {showForm ? (
+        <InstituicaoForm onCancel={() => setShowForm(false)} onSuccess={handleSuccess} />
+      ) : (
+        <InstituicoesList key={key} /> // Adiciona a chave aqui
+      )}
     </div>
   )
 }

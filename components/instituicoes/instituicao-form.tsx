@@ -1,3 +1,6 @@
+// components/instituicoes/instituicao-form.tsx
+// Formulário ATUALIZADO para enviar os dados para a API via fetch.
+
 "use client"
 
 import { useForm } from "react-hook-form"
@@ -6,11 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useStore } from "@/lib/store"
 import { useToast } from "@/hooks/use-toast"
 import { formatCNPJ, formatPhone, formatCEP } from "@/lib/utils"
 import { useState } from "react"
-import { Search } from "lucide-react"
+import { Search, Loader2 } from "lucide-react"
+
+// ... (interface InstituicaoFormData permanece a mesma)
 
 interface InstituicaoFormData {
   razaoSocial: string
@@ -29,36 +33,56 @@ interface InstituicaoFormData {
 }
 
 interface InstituicaoFormProps {
-  onCancel: () => void
+  onCancel: () => void;
+  onSuccess: () => void; // Nova prop para atualizar a lista após o sucesso
 }
 
-export function InstituicaoForm({ onCancel }: InstituicaoFormProps) {
+export function InstituicaoForm({ onCancel, onSuccess }: InstituicaoFormProps) {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting }, // Adicionado isSubmitting
     setValue,
     watch,
+    reset, // Para limpar o formulário
   } = useForm<InstituicaoFormData>()
-  const { addInstituicao } = useStore()
+  
   const { toast } = useToast()
   const [isFetching, setIsFetching] = useState(false)
 
-  const onSubmit = (data: InstituicaoFormData) => {
-    addInstituicao({
-      id: Date.now().toString(),
-      ...data,
-      createdAt: new Date().toISOString(),
-    })
+  // REMOVIDO: const { addInstituicao } = useStore()
 
-    toast({
-      title: "Instituição cadastrada",
-      description: "A instituição foi cadastrada com sucesso.",
-    })
+  const onSubmit = async (data: InstituicaoFormData) => {
+    try {
+      const response = await fetch('/api/institutions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
 
-    onCancel()
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Falha ao cadastrar instituição.');
+      }
+
+      toast({
+        title: "Instituição cadastrada!",
+        description: "A nova instituição foi salva no banco de dados.",
+      });
+      
+      reset(); // Limpa o formulário
+      onSuccess(); // Chama a função para recarregar a lista
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: error.message,
+      })
+    }
   }
 
+  // ... (função handleFetchDataByCnpj permanece a mesma)
   const handleFetchDataByCnpj = async () => {
     const cnpj = watch("cnpj")
     if (!cnpj || cnpj.replace(/\D/g, '').length !== 14) {
@@ -99,6 +123,7 @@ export function InstituicaoForm({ onCancel }: InstituicaoFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* O restante do formulário (campos de input) permanece o mesmo */}
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="cnpj">CNPJ *</Label>
@@ -114,7 +139,7 @@ export function InstituicaoForm({ onCancel }: InstituicaoFormProps) {
                   className={errors.cnpj ? "border-red-500" : ""}
                 />
                 <Button type="button" variant="outline" size="icon" onClick={handleFetchDataByCnpj} disabled={isFetching}>
-                  <Search className="h-4 w-4" />
+                  {isFetching ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4" />}
                 </Button>
               </div>
               {errors.cnpj && <p className="text-sm text-red-500 mt-1">{errors.cnpj.message}</p>}
@@ -261,8 +286,11 @@ export function InstituicaoForm({ onCancel }: InstituicaoFormProps) {
           </div>
 
           <div className="flex gap-4">
-            <Button type="submit">Salvar Instituição</Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar Instituição
+            </Button>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
               Cancelar
             </Button>
           </div>

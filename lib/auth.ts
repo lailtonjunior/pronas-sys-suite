@@ -1,5 +1,5 @@
 // lib/auth.ts
-// Configuração do NextAuth atualizada para usar login com Email/Senha.
+// Configuração do NextAuth 100% focada no login com Email/Senha (Credentials).
 
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { AuthOptions } from "next-auth";
@@ -12,6 +12,7 @@ const prisma = new PrismaClient();
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
+    // Removemos o GoogleProvider e deixamos apenas o CredentialsProvider
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -32,6 +33,7 @@ export const authOptions: AuthOptions = {
           throw new Error("Usuário não encontrado ou senha não configurada.");
         }
 
+        // Compara a senha enviada com a senha criptografada no banco
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password_hash
@@ -41,7 +43,7 @@ export const authOptions: AuthOptions = {
           throw new Error("Senha incorreta.");
         }
 
-        // Retorna o objeto do usuário se tudo estiver correto
+        // Retorna o objeto do usuário se a autenticação for bem-sucedida
         return {
             id: user.id,
             name: user.name,
@@ -55,9 +57,10 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
+    // Adiciona o ID do usuário ao token da sessão
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.sub as string;
+        (session.user as any).id = token.sub;
       }
       return session;
     },

@@ -1,11 +1,12 @@
 // app/layout.tsx
-// Arquivo de layout principal, atualizado para incluir o SessionProvider.
+// Arquivo de layout RAIZ. A única responsabilidade dele é carregar os providers.
 
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import AuthSessionProvider from "@/components/auth/session-provider"; // Importe o provider
+import AuthSessionProvider from "@/components/auth/session-provider";
+import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
-        <AuthSessionProvider> {/* Envolva a aplicação com o provider de sessão */}
+        <AuthSessionProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -30,6 +31,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <Toaster />
           </ThemeProvider>
         </AuthSessionProvider>
       </body>

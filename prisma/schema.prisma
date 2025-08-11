@@ -1,5 +1,5 @@
 // prisma/schema.prisma
-// Este arquivo define o esquema do nosso banco de dados.
+// Modelo de usuário atualizado para tornar o email obrigatório.
 
 datasource db {
   provider = "postgresql"
@@ -30,10 +30,10 @@ model Project {
   id            String      @id @default(cuid())
   title         String
   status        String      @default("Em Elaboração")
-  sections      Json? // Armazenará dados das abas: justificativa, objetivos, etc.
-  budget_lines  Json? // Armazenará as linhas do orçamento
-  attachments   Json? // Armazenará referências aos anexos
-  ai_audit      Json? // Armazenará o resultado da auditoria da IA
+  sections      Json?
+  budget_lines  Json?
+  attachments   Json?
+  ai_audit      Json?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   institution   Institution @relation(fields: [institutionId], references: [id])
@@ -74,7 +74,7 @@ model Session {
 model User {
   id            String        @id @default(cuid())
   name          String?
-  email         String?       @unique
+  email         String        @unique // <-- ALTERADO: Email agora é obrigatório
   emailVerified DateTime?
   image         String?
   password_hash String?
@@ -92,4 +92,3 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
-

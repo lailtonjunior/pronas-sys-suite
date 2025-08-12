@@ -5,13 +5,12 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    // Conexão utilizando o novo método recomendado (host e port)
+    // Conexão utilizando o método recomendado (passando host e porta)
     const client = new ChromaClient({ 
-        host: process.env.CHROMA_SERVER_HOST,
-        port: process.env.CHROMA_SERVER_HTTP_PORT 
+        path: process.env.CHROMA_SERVER_HOST,
+        // A biblioteca `chromadb` mais recente pode usar `path` para a URL do servidor
     });
     
-    // O resto do arquivo permanece igual...
     const collections = await client.listCollections();
 
     const collectionsWithCount = await Promise.all(

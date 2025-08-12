@@ -24,11 +24,13 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
         <AuthSessionProvider>
+          {/* A correção está aqui dentro do ThemeProvider */}
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
-            enableSystemMonitoring
             disableTransitionOnChange
+            // A propriedade 'enableSystemMonitoring' foi removida.
+            // A propriedade 'enableSystem' (que substitui a funcionalidade) já é true por padrão.
           >
             {children}
             <Toaster />
